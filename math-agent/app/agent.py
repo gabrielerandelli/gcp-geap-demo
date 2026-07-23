@@ -41,8 +41,12 @@ _MCP_SERVER_NAME = os.environ["MATH_MCP_SERVER_NAME"]
 _MA_TEMPLATE = os.environ["MODEL_ARMOR_TEMPLATE"]
 # Local-dev only: user ADC can't mint audience-scoped ID tokens. Set this to an SA
 # that has run.invoker on the MCP service and grants token-creator to the current
-# user. On Agent Runtime this is unset — the metadata server mints tokens natively.
+# user. Ignored on Agent Runtime / Cloud Run / GCE where the metadata server can
+# mint audience-scoped ID tokens natively for the attached SA (checked via the
+# GCE metadata env var Agent Runtime sets on every container).
 _IMPERSONATE_SA = os.environ.get("MATH_MCP_IMPERSONATE_SA")
+if _IMPERSONATE_SA and os.environ.get("GOOGLE_CLOUD_AGENT_ENGINE_ID"):
+    _IMPERSONATE_SA = None
 
 
 def _extract_mcp_endpoint(mcp_details: dict) -> str:

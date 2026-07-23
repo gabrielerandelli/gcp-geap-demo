@@ -1658,9 +1658,11 @@ dependencies = [
     { name = "aiohttp" },
     { name = "gcsfs" },
     { name = "google-adk", extra = ["agent-identity", "gcp", "mcp"] },
+    { name = "google-cloud-aiplatform", extra = ["agent-engines", "evaluation"] },
     { name = "google-cloud-logging" },
     { name = "google-cloud-modelarmor" },
     { name = "opentelemetry-instrumentation-google-genai" },
+    { name = "protobuf" },
 ]
 
 [package.optional-dependencies]
@@ -1687,12 +1689,14 @@ requires-dist = [
     { name = "aiohttp", specifier = ">=3.13.4" },
     { name = "codespell", marker = "extra == 'lint'", specifier = ">=2.2.0,<3.0.0" },
     { name = "gcsfs", specifier = ">=2024.11.0" },
+    { name = "google-adk", extras = ["agent-identity", "gcp", "mcp"], specifier = ">=2.0.0,<3.0.0" },
     { name = "google-adk", extras = ["eval"], marker = "extra == 'eval'", specifier = ">=2.0.0,<3.0.0" },
-    { name = "google-adk", extras = ["gcp", "mcp", "agent-identity"], specifier = ">=2.0.0,<3.0.0" },
+    { name = "google-cloud-aiplatform", extras = ["agent-engines", "evaluation"], specifier = ">=1.156.0" },
     { name = "google-cloud-aiplatform", extras = ["evaluation"], marker = "extra == 'eval'", specifier = ">=1.156.0" },
     { name = "google-cloud-logging", specifier = ">=3.12.0,<4.0.0" },
     { name = "google-cloud-modelarmor", specifier = ">=0.7,<1.0" },
     { name = "opentelemetry-instrumentation-google-genai", specifier = ">=0.1.0,<1.0.0" },
+    { name = "protobuf", specifier = ">=6.31.1,<7.0.0" },
     { name = "ruff", marker = "extra == 'lint'", specifier = ">=0.4.6,<1.0.0" },
     { name = "ty", marker = "extra == 'lint'", specifier = ">=0.0.1a0" },
 ]

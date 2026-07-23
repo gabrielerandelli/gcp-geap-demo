@@ -7,13 +7,15 @@ authors = [
 ]
 
 dependencies = [
-    "google-adk[gcp,mcp,agent-identity]>=2.0.0,<3.0.0",
+    "google-adk[agent-identity,gcp,mcp]>=2.0.0,<3.0.0",
     "a2a-sdk[http-server]~=0.3.22",
     "aiohttp>=3.13.4",
     "opentelemetry-instrumentation-google-genai>=0.1.0,<1.0.0",
     "gcsfs>=2024.11.0",
     "google-cloud-logging>=3.12.0,<4.0.0",
     "google-cloud-modelarmor>=0.7,<1.0",
+    "google-cloud-aiplatform[agent-engines,evaluation]>=1.156.0",
+    "protobuf>=6.31.1,<7.0.0",
 ]
 requires-python = ">=3.11,<3.14"
 

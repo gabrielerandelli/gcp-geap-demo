@@ -207,3 +207,8 @@ tools/a2a-inspector/
 *.pem
 *-key.json
 credentials*.json
+
+# GCP-specific values — keep out of the tracked repo (see CLAUDE.md anti-goal)
+deployment_metadata.json
+deployment/terraform/single-project/vars/env.tfvars
+deployment/terraform/cicd/vars/env.tfvars
