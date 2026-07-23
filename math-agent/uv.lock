@@ -643,6 +643,10 @@ wheels = [
 ]
 
 [package.optional-dependencies]
+agent-identity = [
+    { name = "google-cloud-agentidentitycredentials" },
+    { name = "google-cloud-iamconnectorcredentials" },
+]
 eval = [
     { name = "gepa" },
     { name = "google-cloud-aiplatform", extra = ["evaluation"] },
@@ -732,6 +736,22 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/70/18/90c7fac516e63cf2058166fce0c88c353647c677b51cc036c09c49bb5cbb/google_auth_oauthlib-1.4.0.tar.gz", hash = "sha256:18b5e28880eb8eba9065c436becdc0ee8e4b59117a73a510679c82f70cd363d2", size = 21675 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/37/d3/d7dff0d58a9e9244b48044bfb6a898bfcc8ecc42e0031d1bebc695344725/google_auth_oauthlib-1.4.0-py3-none-any.whl", hash = "sha256:251314f213a9ee46a5ae73988e84fd7cca8bb68e7ecf4bfd45940f9e7f51d070", size = 19261 },
+]
+
+[[package]]
+name = "google-cloud-agentidentitycredentials"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-api-core", extra = ["grpc"] },
+    { name = "google-auth" },
+    { name = "grpcio" },
+    { name = "proto-plus" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e3/52/991e1beea8032775ba2cda18b75ebde934807729d8b12cfad1dc8c595a36/google_cloud_agentidentitycredentials-0.1.0.tar.gz", hash = "sha256:50c03675ae1578b87d0085abefbdb1723516befef65a96e07975d2916a64a86b", size = 53263 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/31/96/6069ce3b381b992de2dc85c7ee1be6fde2cc7d04980825dd7f1bdd5ee47f/google_cloud_agentidentitycredentials-0.1.0-py3-none-any.whl", hash = "sha256:8fa5233e52df8a4ed1c70bf51bb752ce3ff6a819a448add235e6ce223e69e027", size = 55613 },
 ]
 
 [[package]]
@@ -928,6 +948,22 @@ wheels = [
 ]
 
 [[package]]
+name = "google-cloud-iamconnectorcredentials"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-api-core", extra = ["grpc"] },
+    { name = "google-auth" },
+    { name = "grpcio" },
+    { name = "proto-plus" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/56/01/9678b0f674e6beb18cc76dfa3d0a9da5b7eb433567bd68a08a8fe2a9d604/google_cloud_iamconnectorcredentials-0.1.1.tar.gz", hash = "sha256:269438ce79f5826e09e45919022881291da8e22293d009d5bd9dd346448d4ddb", size = 55341 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ab/21/e30bcd57445883e9c7452431346891fd76eae4a03d2e6fc0ee088131a70f/google_cloud_iamconnectorcredentials-0.1.1-py3-none-any.whl", hash = "sha256:0f69103a80eb8df5a52d1c595e51927d83e3383d35515f1d07bc88ed67fee6bc", size = 57609 },
+]
+
+[[package]]
 name = "google-cloud-logging"
 version = "3.16.1"
 source = { registry = "https://pypi.org/simple" }
@@ -946,6 +982,22 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a9/a5/895a08ddb4b0e1374b291905e36514ca7d2d620542239e8ad5291627fdb2/google_cloud_logging-3.16.1.tar.gz", hash = "sha256:603024ad8257d8194f53c9dfaf27fc2c32111d627bc4c574556584a8150fcace", size = 293629 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/98/ab/099478b9d4983e25f6d966e74c2bd2a68e8e33125f2862bdcda573b6ec46/google_cloud_logging-3.16.1-py3-none-any.whl", hash = "sha256:2314db116753d8a449f28d3f60f710885f5c563a47311850415f9e3e0a116970", size = 234182 },
+]
+
+[[package]]
+name = "google-cloud-modelarmor"
+version = "0.7.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-api-core", extra = ["grpc"] },
+    { name = "google-auth" },
+    { name = "grpcio" },
+    { name = "proto-plus" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/73/3f/fd80b55002cf54f2c8b7ba3ff72049d8928afe7dd4849a385a55b4a4c2f7/google_cloud_modelarmor-0.7.1.tar.gz", hash = "sha256:1cc9eabb94c274d99dc4069d505e1ec4f602bea0aba1fb221233e52171897509", size = 167791 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ea/a5/3f212fc5abb3720bbb473d076decee618472421cf46fcf1495ccf24d56a9/google_cloud_modelarmor-0.7.1-py3-none-any.whl", hash = "sha256:90285c3f2dc859413a7ff86d585d1ec30263ec266f45f2cba930cae66a994cc0", size = 143588 },
 ]
 
 [[package]]
@@ -1605,8 +1657,9 @@ dependencies = [
     { name = "a2a-sdk", extra = ["http-server"] },
     { name = "aiohttp" },
     { name = "gcsfs" },
-    { name = "google-adk", extra = ["gcp", "mcp"] },
+    { name = "google-adk", extra = ["agent-identity", "gcp", "mcp"] },
     { name = "google-cloud-logging" },
+    { name = "google-cloud-modelarmor" },
     { name = "opentelemetry-instrumentation-google-genai" },
 ]
 
@@ -1635,9 +1688,10 @@ requires-dist = [
     { name = "codespell", marker = "extra == 'lint'", specifier = ">=2.2.0,<3.0.0" },
     { name = "gcsfs", specifier = ">=2024.11.0" },
     { name = "google-adk", extras = ["eval"], marker = "extra == 'eval'", specifier = ">=2.0.0,<3.0.0" },
-    { name = "google-adk", extras = ["gcp", "mcp"], specifier = ">=2.0.0,<3.0.0" },
+    { name = "google-adk", extras = ["gcp", "mcp", "agent-identity"], specifier = ">=2.0.0,<3.0.0" },
     { name = "google-cloud-aiplatform", extras = ["evaluation"], marker = "extra == 'eval'", specifier = ">=1.156.0" },
     { name = "google-cloud-logging", specifier = ">=3.12.0,<4.0.0" },
+    { name = "google-cloud-modelarmor", specifier = ">=0.7,<1.0" },
     { name = "opentelemetry-instrumentation-google-genai", specifier = ">=0.1.0,<1.0.0" },
     { name = "ruff", marker = "extra == 'lint'", specifier = ">=0.4.6,<1.0.0" },
     { name = "ty", marker = "extra == 'lint'", specifier = ">=0.0.1a0" },
