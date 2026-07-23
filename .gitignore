@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment overrides
+.env
+.env.local
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Claude Code per-directory scratch (auto-created, empty stubs)
+.claude/
+
+# Build / cache
+build/
+dist/
+*.egg-info/

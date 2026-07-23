@@ -1,0 +1,40 @@
+{
+  "tools": [
+    {
+      "name": "add",
+      "description": "Return the sum a + b.",
+      "annotations": {
+        "title": "Add",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      }
+    },
+    {
+      "name": "sub",
+      "description": "Return the difference a - b.",
+      "annotations": {
+        "title": "Subtract",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      }
+    },
+    {
+      "name": "multiply",
+      "description": "Return the product a * b.",
+      "annotations": {
+        "title": "Multiply",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      }
+    },
+    {
+      "name": "divide",
+      "description": "Return the quotient a / b. Raises an error when b == 0.",
+      "annotations": {
+        "title": "Divide",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      }
+    }
+  ]
+}
