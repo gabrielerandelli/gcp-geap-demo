@@ -2,9 +2,9 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir "fastmcp~=3.4"
+COPY pyproject.toml server.py ./
 
-COPY server.py ./
+RUN pip install --no-cache-dir --pre .
 
 ENV PORT=8080
 EXPOSE 8080

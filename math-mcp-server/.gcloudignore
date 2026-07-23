@@ -1,0 +1,8 @@
+# Cloud Build --source excludes these when uploading the tarball.
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.claude/
+uv.lock

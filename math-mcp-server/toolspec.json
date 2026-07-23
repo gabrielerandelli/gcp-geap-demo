@@ -3,6 +3,14 @@
     {
       "name": "add",
       "description": "Return the sum a + b.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "a": { "type": "number", "description": "First operand." },
+          "b": { "type": "number", "description": "Second operand." }
+        },
+        "required": ["a", "b"]
+      },
       "annotations": {
         "title": "Add",
         "readOnlyHint": true,
@@ -12,6 +20,14 @@
     {
       "name": "sub",
       "description": "Return the difference a - b.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "a": { "type": "number", "description": "Minuend." },
+          "b": { "type": "number", "description": "Subtrahend." }
+        },
+        "required": ["a", "b"]
+      },
       "annotations": {
         "title": "Subtract",
         "readOnlyHint": true,
@@ -21,6 +37,14 @@
     {
       "name": "multiply",
       "description": "Return the product a * b.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "a": { "type": "number", "description": "First factor." },
+          "b": { "type": "number", "description": "Second factor." }
+        },
+        "required": ["a", "b"]
+      },
       "annotations": {
         "title": "Multiply",
         "readOnlyHint": true,
@@ -30,6 +54,17 @@
     {
       "name": "divide",
       "description": "Return the quotient a / b. Raises an error when b == 0.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "a": { "type": "number", "description": "Dividend." },
+          "b": {
+            "type": "number",
+            "description": "Divisor (must be non-zero)."
+          }
+        },
+        "required": ["a", "b"]
+      },
       "annotations": {
         "title": "Divide",
         "readOnlyHint": true,
