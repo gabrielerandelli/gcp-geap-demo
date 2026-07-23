@@ -11,9 +11,9 @@ venv/
 .env
 .env.local
 
-# Editor/IDE
-.vscode/
-.idea/
+# Editor/IDE (no trailing slash — sandbox drops these as empty files too)
+.vscode
+.idea
 
 # OS junk
 .DS_Store
@@ -21,6 +21,17 @@ Thumbs.db
 
 # Claude Code per-directory scratch (auto-created, empty stubs)
 .claude/
+
+# Cloud Workstation / sandbox: zero-byte dotfile stubs dropped into the working tree
+.bash_profile
+.bashrc
+.profile
+.zprofile
+.zshrc
+.gitconfig
+.gitmodules
+.mcp.json
+.ripgreprc
 
 # Build / cache
 build/
