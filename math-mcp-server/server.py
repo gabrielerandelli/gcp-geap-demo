@@ -24,6 +24,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import SpanKind, Status, StatusCode
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 # --- OpenTelemetry setup ---------------------------------------------------
@@ -52,6 +53,11 @@ def _configure_tracing() -> None:
         "cloud.account.id": project_id,
         "gcp.project_id": project_id,
     }
+    # `gcp.mcp.server.id` = URN of the MCP server per the GEAP MCP-tracing
+    # docs. In Agent Registry that value is the `mcpServerId` field returned
+    # by `gcloud alpha agent-registry mcp-servers describe …` (format
+    # `urn:mcp:projects-{num}:projects:{num}:locations:{loc}:agentregistry:services:{id}`),
+    # NOT the `name` field.
     mcp_server_urn = os.environ.get("MCP_SERVER_URN")
     if mcp_server_urn:
         resource_attrs["gcp.mcp.server.id"] = mcp_server_urn
@@ -93,6 +99,13 @@ class GeapMcpTracingMiddleware(Middleware):
                 "jsonrpc.protocol.version": JSONRPC_PROTOCOL_VERSION,
             },
         ) as span:
+            if context.fastmcp_context is not None:
+                try:
+                    span.set_attribute(
+                        "jsonrpc.request.id", context.fastmcp_context.request_id
+                    )
+                except Exception:
+                    pass
             try:
                 return await call_next(context)
             except Exception as exc:
