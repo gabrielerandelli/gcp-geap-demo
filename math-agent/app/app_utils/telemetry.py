@@ -68,7 +68,14 @@ def setup_agent_engine_telemetry() -> None:
         return
 
     import google.auth
+    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
     from vertexai.agent_engines.templates.adk import _default_instrumentor_builder
 
     _, project_id = google.auth.default()
     _default_instrumentor_builder(project_id, enable_tracing=True, enable_logging=True)
+
+    # Inject W3C traceparent into outbound httpx calls so the ADK MCP client's
+    # requests to the Cloud Run MCP server land in the same Cloud Trace trace as
+    # the agent-side spans. Must run after the Agent Engine tracer provider is
+    # installed above so the instrumentor picks up that provider.
+    HTTPXClientInstrumentor().instrument()
