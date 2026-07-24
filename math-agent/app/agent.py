@@ -25,14 +25,23 @@ load_dotenv()
 
 import logging
 
+import httpx
+
 import google.auth
 import google.auth.transport.requests
 from google.adk.agents import Agent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.apps import App
+from google.adk.auth.auth_tool import AuthConfig
+from google.adk.auth.credential_manager import CredentialManager
+from google.adk.integrations.agent_identity import (
+    GcpAuthProvider,
+    GcpAuthProviderScheme,
+)
 from google.adk.integrations.agent_registry import AgentRegistry
 from google.adk.models import Gemini
 from google.adk.models.llm_response import LlmResponse
+from google.adk.tools.authenticated_function_tool import AuthenticatedFunctionTool
 from google.adk.tools.load_memory_tool import LoadMemoryTool
 from google.auth import impersonated_credentials
 from google.cloud import modelarmor_v1
@@ -119,6 +128,64 @@ registry = AgentRegistry(
     header_provider=_header_provider,
 )
 math_toolset = registry.get_mcp_toolset(mcp_server_name=_MCP_SERVER_NAME)
+
+
+# 2b. Agent Identity — register the GCP provider so ADK's CredentialManager can
+# resolve GcpAuthProviderScheme references on AuthenticatedFunctionTool /
+# McpToolset. The runtime SA needs `roles/agentidentity.user`.
+CredentialManager.register_auth_provider(GcpAuthProvider())
+
+_CURRENCY_AUTH_PROVIDER = (
+    f"projects/{_PROJECT}/locations/{_REGISTRY_LOCATION}"
+    "/authProviders/currency-freeapi"
+)
+
+
+async def _convert_currency(
+    amount: float, base: str, target: str, credential=None
+) -> dict:
+    """Convert a monetary amount using freecurrencyapi.com. The `credential`
+    kwarg is auto-injected by AuthenticatedFunctionTool from the Agent Identity
+    AuthProvider named by `_CURRENCY_AUTH_PROVIDER`; its `.http.credentials.token`
+    holds the API key.
+    """
+    if credential is None or credential.http is None:
+        return {
+            "error": "credential unavailable — Agent Identity token retrieval failed"
+        }
+    # ApiKey AuthProviders return the key via `additional_headers` (both under
+    # the provider-defined header name AND under `X-GOOG-API-KEY`). Bearer
+    # tokens land in `credentials.token`. Support both shapes.
+    api_key = credential.http.credentials.token
+    if not api_key and credential.http.additional_headers:
+        api_key = next(iter(credential.http.additional_headers.values()), None)
+    if not api_key:
+        return {"error": "credential unavailable — no token/api-key returned"}
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        r = await client.get(
+            "https://api.freecurrencyapi.com/v1/latest",
+            params={
+                "base_currency": base.upper(),
+                "currencies": target.upper(),
+            },
+            headers={"apikey": api_key},
+        )
+        r.raise_for_status()
+        rate = r.json()["data"][target.upper()]
+    return {
+        "converted": amount * rate,
+        "rate": rate,
+        "base": base.upper(),
+        "target": target.upper(),
+    }
+
+
+currency_tool = AuthenticatedFunctionTool(
+    func=_convert_currency,
+    auth_config=AuthConfig(
+        auth_scheme=GcpAuthProviderScheme(name=_CURRENCY_AUTH_PROVIDER),
+    ),
+)
 
 # 3. Model Armor callbacks.
 # REST transport avoids gRPC-through-HTTP-proxy failures in restricted networks.
@@ -239,12 +306,16 @@ root_agent = Agent(
     instruction=(
         "You are a math assistant. For any arithmetic request, call the "
         "appropriate arithmetic tool available to you rather than computing "
-        "yourself. Refuse anything unrelated to arithmetic. "
+        "yourself. You can also convert currency amounts by calling the "
+        "`_convert_currency` tool with (amount, base currency code, target "
+        "currency code) — combine it freely with arithmetic tools "
+        "(e.g. 'convert 100 USD to EUR then divide by 3'). "
+        "Refuse anything unrelated to arithmetic or currency conversion. "
         "When the user references earlier calculations or asks for a summary "
         "of past operations, call the `load_memory` tool with a concise "
         "natural-language query describing what they're asking about."
     ),
-    tools=[math_toolset, LoadMemoryTool()],
+    tools=[math_toolset, LoadMemoryTool(), currency_tool],
     before_model_callback=_model_armor_before,
     after_model_callback=_model_armor_after,
     after_agent_callback=_add_events_to_memory,
