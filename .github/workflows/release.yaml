@@ -1,0 +1,69 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-mcp:
+    name: Deploy MCP to Cloud Run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: gcloud run deploy math-mcp
+        run: |
+          gcloud run deploy math-mcp \
+            --source math-mcp-server/ \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --no-allow-unauthenticated \
+            --service-account "${{ vars.MCP_SA }}" \
+            --set-env-vars "FASTMCP_CHECK_FOR_UPDATES=off,GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},MCP_SERVER_URN=${{ vars.MCP_SERVER_URN }},OTEL_SERVICE_NAME=math-mcp" \
+            --labels "version=${{ github.ref_name }}" \
+            --quiet
+
+  deploy-agent:
+    name: Deploy agent to Agent Runtime
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install agents-cli
+        run: pip install "google-agents-cli==1.2.1"
+
+      - name: agents-cli deploy math-agent
+        working-directory: math-agent
+        run: |
+          agents-cli deploy \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --service-account "${{ vars.AGENT_SA }}" \
+            --update-env-vars "GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=global,AGENT_REGISTRY_LOCATION=${{ vars.GCP_REGION }},MATH_MCP_SERVER_NAME=${{ vars.MCP_SERVER_NAME }},MODEL_ARMOR_TEMPLATE=${{ vars.MODEL_ARMOR_TEMPLATE }},AGENT_VERSION=${{ github.ref_name }}" \
+            --no-confirm-project
