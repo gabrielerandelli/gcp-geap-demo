@@ -23,17 +23,23 @@ from dotenv import load_dotenv
 # where the runtime sets env vars directly.
 load_dotenv()
 
+import logging
+
 import google.auth
 import google.auth.transport.requests
 from google.adk.agents import Agent
+from google.adk.agents.callback_context import CallbackContext
 from google.adk.apps import App
 from google.adk.integrations.agent_registry import AgentRegistry
 from google.adk.models import Gemini
 from google.adk.models.llm_response import LlmResponse
+from google.adk.tools.load_memory_tool import LoadMemoryTool
 from google.auth import impersonated_credentials
 from google.cloud import modelarmor_v1
 from google.genai import types
 from google.oauth2 import id_token
+
+_logger = logging.getLogger(__name__)
 
 _PROJECT = os.environ["GOOGLE_CLOUD_PROJECT"]
 _REGISTRY_LOCATION = os.environ.get("AGENT_REGISTRY_LOCATION", "us-central1")
@@ -186,7 +192,44 @@ def _model_armor_after(callback_context, llm_response):
     return None
 
 
-# 4. Preserve Agent + App exports.
+# 4. Memory Bank: on-demand recall + generation at end of each turn.
+# NOTE: We pass `wait_for_completion=True` so the underlying VertexAiMemoryBankService
+# takes the synchronous `memories.generate` path (see its docstring). Without it,
+# the default `ingest_events` path is buffered/asynchronous and does not generate
+# facts on its own — memories never appear.
+async def _add_events_to_memory(callback_context: CallbackContext) -> None:
+    """Persist ALL events of the current session to Memory Bank synchronously.
+
+    Calls the memory service directly so we can pass ``wait_for_completion=True``,
+    which routes VertexAiMemoryBankService to ``memories.generate`` (extracts
+    facts immediately) instead of the buffered ``ingest_events`` default. Any
+    failure is logged and swallowed — memory persistence must never fail a user
+    response.
+    """
+    try:
+        invocation = callback_context._invocation_context
+        memory_service = invocation.memory_service
+        session = invocation.session
+        if memory_service is None or not session.events:
+            return
+        await memory_service.add_events_to_memory(
+            app_name=session.app_name,
+            user_id=session.user_id,
+            events=session.events,
+            custom_metadata={"wait_for_completion": True},
+        )
+        _logger.warning(
+            "Memory Bank generate OK for user=%s events=%d",
+            session.user_id,
+            len(session.events),
+        )
+    except Exception as exc:
+        _logger.warning(
+            "Memory Bank generate failed: %s", exc, exc_info=True
+        )
+
+
+# 5. Preserve Agent + App exports.
 root_agent = Agent(
     name="root_agent",
     model=Gemini(
@@ -196,11 +239,15 @@ root_agent = Agent(
     instruction=(
         "You are a math assistant. For any arithmetic request, call the "
         "appropriate arithmetic tool available to you rather than computing "
-        "yourself. Refuse anything unrelated to arithmetic."
+        "yourself. Refuse anything unrelated to arithmetic. "
+        "When the user references earlier calculations or asks for a summary "
+        "of past operations, call the `load_memory` tool with a concise "
+        "natural-language query describing what they're asking about."
     ),
-    tools=[math_toolset],
+    tools=[math_toolset, LoadMemoryTool()],
     before_model_callback=_model_armor_before,
     after_model_callback=_model_armor_after,
+    after_agent_callback=_add_events_to_memory,
 )
 
 app = App(
