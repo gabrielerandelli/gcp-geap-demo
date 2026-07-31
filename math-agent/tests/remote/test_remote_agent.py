@@ -111,16 +111,16 @@ def test_remote_memory_bank_retention() -> None:
 
     # Session 1: Store personal fact
     _query_remote_agent(
-        "My name is Taylor and I run a robotics lab in Seattle. Calculate 12 times 12.",
+        "Hello Sparky! I am Taylor, and I run a robotics lab in Seattle.",
         user_id=test_user,
     )
 
-    # Wait for asynchronous Memory Bank ingestion background task
-    time.sleep(20.0)
+    # Wait for asynchronous Memory Bank ingestion
+    time.sleep(15.0)
 
     # Session 2: Recall personal fact via LoadMemoryTool
     response_2 = _query_remote_agent(
-        "Please use the load_memory tool to recall my name and what kind of lab I run.",
+        "Please call load_memory to check what my name is and what I do for work.",
         user_id=test_user,
     )
     assert "Taylor" in response_2 or "robotics" in response_2, (
