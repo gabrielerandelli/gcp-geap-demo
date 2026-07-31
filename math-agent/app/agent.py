@@ -231,12 +231,14 @@ async def _add_events_to_memory(callback_context: CallbackContext) -> None:
         )
 
 
+_ROOT_MODEL = os.environ.get("ROOT_AGENT_MODEL", "gemini-2.5-pro")
+
 # Root MAS Coordinator Agent ("Sparky the Math Mascot").
 root_agent = Agent(
     name="root_agent",
     description="Primary School Math Tutor MAS Root Coordinator Agent",
     model=Gemini(
-        model="gemini-flash-latest",
+        model=_ROOT_MODEL,
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
     instruction=(

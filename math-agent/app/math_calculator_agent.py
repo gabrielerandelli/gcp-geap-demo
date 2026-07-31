@@ -114,6 +114,10 @@ _CURRENCY_AUTH_PROVIDER = (
     f"projects/{_PROJECT}/locations/{_REGISTRY_LOCATION}"
     "/authProviders/currency-freeapi"
 )
+from app.hitl_hooks import HitlGuard
+from app.json_logger import log_intent_outcome
+
+_logger = logging.getLogger(__name__)
 
 
 class CurrencyConvertInput(BaseModel):
@@ -122,24 +126,35 @@ class CurrencyConvertInput(BaseModel):
     amount: float = Field(..., description="Monetary amount to convert.")
     base: str = Field(..., description="Three-letter base currency code (e.g., 'USD', 'EUR').")
     target: str = Field(..., description="Three-letter target currency code (e.g., 'EUR', 'GBP').")
+    teacher_approval_code: str | None = Field(
+        None,
+        description=(
+            "Optional teacher or supervisor approval token required for high-stakes "
+            "currency conversions exceeding $1,000 USD."
+        ),
+    )
 
 
 class CurrencyConvertOutput(BaseModel):
     """Output results for currency conversion."""
 
-    status: str = Field(..., description="Execution status: 'success' or 'error'.")
+    status: str = Field(..., description="Execution status: 'success', 'pending_human_approval', or 'error'.")
     converted: float | None = Field(None, description="Converted monetary amount.")
     rate: float | None = Field(None, description="Exchange rate applied.")
     base: str | None = Field(None, description="Base currency code.")
     target: str | None = Field(None, description="Target currency code.")
     error: str | None = Field(None, description="Error message if conversion failed.")
     recovery_instruction: str | None = Field(
-        None, description="Guided recovery advice for the LLM if an error occurred."
+        None, description="Guided recovery advice for the LLM if an error occurred or human approval is needed."
     )
 
 
 async def _convert_currency(
-    amount: float, base: str, target: str, credential=None
+    amount: float,
+    base: str,
+    target: str,
+    teacher_approval_code: str | None = None,
+    credential=None,
 ) -> CurrencyConvertOutput:
     """Convert a monetary amount from a base currency to a target currency.
 
@@ -150,17 +165,35 @@ async def _convert_currency(
         amount (float): The monetary value to convert.
         base (str): The 3-letter currency code to convert from (e.g., 'USD').
         target (str): The 3-letter currency code to convert to (e.g., 'EUR').
+        teacher_approval_code (str, optional): Teacher approval token for high-stakes conversions.
         credential (Any, optional): Auto-injected Agent Identity credential object. Defaults to None.
 
     Returns:
-        CurrencyConvertOutput: Pydantic model containing converted amount, exchange rate, base, target, status, and guided recovery instruction if conversion fails.
+        CurrencyConvertOutput: Pydantic model containing status, converted amount, rate, and recovery instructions.
     """
     intent = {
         "action": "currency_conversion",
         "amount": amount,
         "base": base.upper() if base else base,
         "target": target.upper() if target else target,
+        "has_approval_code": bool(teacher_approval_code),
     }
+
+    # Human-In-The-Loop (HITL) Guardrail Check
+    hitl_res = HitlGuard.check_currency_hitl(
+        amount=amount,
+        base=base,
+        target=target,
+        teacher_approval_code=teacher_approval_code,
+    )
+    if hitl_res.requires_approval:
+        return CurrencyConvertOutput(
+            status="pending_human_approval",
+            base=base.upper() if base else base,
+            target=target.upper() if target else target,
+            error=hitl_res.message,
+            recovery_instruction=hitl_res.recovery_instruction,
+        )
 
     if credential is None or credential.http is None:
         output = CurrencyConvertOutput(
@@ -277,6 +310,8 @@ currency_tool = AuthenticatedFunctionTool(
 )
 
 
+_MATH_MODEL = os.environ.get("MATH_AGENT_MODEL", "gemini-2.5-flash")
+
 math_calculator_agent = Agent(
     name="math_calculator_agent",
     description=(
@@ -285,7 +320,7 @@ math_calculator_agent = Agent(
         "and currency word problems step-by-step."
     ),
     model=Gemini(
-        model="gemini-flash-latest",
+        model=_MATH_MODEL,
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
     instruction=(

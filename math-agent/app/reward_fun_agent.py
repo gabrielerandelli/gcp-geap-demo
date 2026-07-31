@@ -14,11 +14,14 @@
 # limitations under the License.
 
 import logging
+import os
+
 from google.adk.agents import Agent
 from google.adk.models import Gemini
 from google.genai import types
 from pydantic import BaseModel, Field
 
+from app.hitl_hooks import HitlGuard
 from app.json_logger import log_intent_outcome
 
 _logger = logging.getLogger(__name__)
@@ -39,25 +42,32 @@ class RewardBadgeInput(BaseModel):
         "star",
         description="Theme style for the badge. Options: 'star', 'trophy', 'owl', 'puppy', 'rocket'.",
     )
+    teacher_approval_code: str | None = Field(
+        None,
+        description="Optional teacher or supervisor approval token required for special distinction/trophy award badges.",
+    )
 
 
 class RewardBadgeOutput(BaseModel):
     """Output structure for the generated cartoon reward badge."""
 
-    status: str = Field(..., description="Execution status: 'success' or 'error'.")
+    status: str = Field(..., description="Execution status: 'success', 'pending_human_approval', or 'error'.")
     title: str = Field(..., description="Title displayed on the badge.")
     joke_punchline: str = Field(..., description="Joke punchline displayed on the badge.")
     theme: str = Field(..., description="Applied badge theme name.")
     badge_svg: str = Field("", description="Complete SVG string representing the cartoon badge card.")
     badge_markdown: str = Field("", description="Embedded Markdown data URI string for instant UI rendering.")
-    error: str | None = Field(None, description="Error message if badge generation failed.")
+    error: str | None = Field(None, description="Error message if badge generation failed or approval is needed.")
     recovery_instruction: str | None = Field(
-        None, description="Guided recovery advice for the LLM if an error occurred."
+        None, description="Guided recovery advice for the LLM if an error occurred or human approval is required."
     )
 
 
 def generate_funny_reward_image(
-    title: str, joke_punchline: str, theme: str = "star"
+    title: str,
+    joke_punchline: str,
+    theme: str = "star",
+    teacher_approval_code: str | None = None,
 ) -> RewardBadgeOutput:
     """Generate a vibrant, funny cartoon reward badge card for a primary school student.
 
@@ -65,16 +75,37 @@ def generate_funny_reward_image(
         title (str): Celebratory badge title (e.g. 'Math Superstar!', 'Owl-some Job!', 'Math Wizard!').
         joke_punchline (str): A funny kid-friendly math joke or riddle punchline.
         theme (str): Theme of the badge. Supported options are 'star', 'trophy', 'owl', 'puppy', 'rocket' (defaults to 'star').
+        teacher_approval_code (str, optional): Approval token for special trophy/grandmaster award badges.
 
     Returns:
-        RewardBadgeOutput: Pydantic model containing status, title, joke_punchline, theme, raw badge_svg, embedded badge_markdown, and recovery instructions if an error occurs.
+        RewardBadgeOutput: Pydantic model containing status, title, joke_punchline, theme, badge SVG, and recovery instructions.
     """
     intent = {
         "action": "generate_reward_badge_image",
         "title": title,
         "theme": theme,
         "joke_punchline": joke_punchline,
+        "has_approval_code": bool(teacher_approval_code),
     }
+
+    # Human-In-The-Loop (HITL) Guardrail Check for Special Award Badges
+    hitl_res = HitlGuard.check_reward_hitl(
+        title=title,
+        theme=theme,
+        teacher_approval_code=teacher_approval_code,
+    )
+    if hitl_res.requires_approval:
+        return RewardBadgeOutput(
+            status="pending_human_approval",
+            title=title,
+            joke_punchline=joke_punchline,
+            theme=theme,
+            badge_svg="",
+            badge_markdown="",
+            error=hitl_res.message,
+            recovery_instruction=hitl_res.recovery_instruction,
+        )
+
     try:
         badge_icons = {
             "star": "⭐",
@@ -162,6 +193,8 @@ def generate_funny_reward_image(
         return output
 
 
+_REWARD_MODEL = os.environ.get("REWARD_AGENT_MODEL", "gemini-2.5-flash-lite")
+
 reward_fun_agent = Agent(
     name="reward_fun_agent",
     description=(
@@ -170,7 +203,7 @@ reward_fun_agent = Agent(
         "generates funny cartoon reward badges/images."
     ),
     model=Gemini(
-        model="gemini-flash-latest",
+        model=_REWARD_MODEL,
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
     instruction=(
