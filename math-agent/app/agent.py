@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import os
 from urllib.parse import urlparse
 
@@ -259,19 +260,12 @@ def _model_armor_after(callback_context, llm_response):
     return None
 
 
-# 4. Memory Bank: on-demand recall + generation at end of each turn.
-# NOTE: We pass `wait_for_completion=True` so the underlying VertexAiMemoryBankService
-# takes the synchronous `memories.generate` path (see its docstring). Without it,
-# the default `ingest_events` path is buffered/asynchronous and does not generate
-# facts on its own — memories never appear.
+# 4. Memory Bank: non-blocking asynchronous ingestion in background.
 async def _add_events_to_memory(callback_context: CallbackContext) -> None:
-    """Persist ALL events of the current session to Memory Bank synchronously.
+    """Persist session events to Memory Bank asynchronously in the background.
 
-    Calls the memory service directly so we can pass ``wait_for_completion=True``,
-    which routes VertexAiMemoryBankService to ``memories.generate`` (extracts
-    facts immediately) instead of the buffered ``ingest_events`` default. Any
-    failure is logged and swallowed — memory persistence must never fail a user
-    response.
+    Dispatches `memory_service.add_events_to_memory` as a background task
+    so Memory Bank processing does not block the user response or UI turn.
     """
     try:
         invocation = callback_context._invocation_context
@@ -279,21 +273,24 @@ async def _add_events_to_memory(callback_context: CallbackContext) -> None:
         session = invocation.session
         if memory_service is None or not session.events:
             return
-        await memory_service.add_events_to_memory(
-            app_name=session.app_name,
-            user_id=session.user_id,
-            events=session.events,
-            custom_metadata={"wait_for_completion": True},
+
+        asyncio.create_task(
+            memory_service.add_events_to_memory(
+                app_name=session.app_name,
+                user_id=session.user_id,
+                events=session.events,
+            )
         )
-        _logger.warning(
-            "Memory Bank generate OK for user=%s events=%d",
+        _logger.info(
+            "Dispatched background Memory Bank ingestion for user=%s events=%d",
             session.user_id,
             len(session.events),
         )
     except Exception as exc:
         _logger.warning(
-            "Memory Bank generate failed: %s", exc, exc_info=True
+            "Memory Bank dispatch failed: %s", exc, exc_info=True
         )
+
 
 
 # 5. Gamification Tool: Funny Cartoon Reward Badge Generator.

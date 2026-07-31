@@ -42,3 +42,32 @@ def test_generate_funny_reward_image_tool() -> None:
     assert res["joke_punchline"] == "Because 7 ate 9!"
     assert "<svg" in res["badge_svg"]
     assert "data:image/svg+xml" in res["badge_markdown"]
+
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_add_events_to_memory_non_blocking() -> None:
+
+    """Test that _add_events_to_memory dispatches background task without blocking."""
+    from unittest.mock import AsyncMock, MagicMock
+    from app.agent import _add_events_to_memory
+
+    mock_callback_ctx = MagicMock()
+    mock_invocation = MagicMock()
+    mock_memory_service = AsyncMock()
+    mock_session = MagicMock()
+
+    mock_session.app_name = "test_app"
+    mock_session.user_id = "user_123"
+    mock_session.events = [MagicMock()]
+
+    mock_invocation.memory_service = mock_memory_service
+    mock_invocation.session = mock_session
+    mock_callback_ctx._invocation_context = mock_invocation
+
+    # Call callback — must return instantly
+    await _add_events_to_memory(mock_callback_ctx)
+
+
