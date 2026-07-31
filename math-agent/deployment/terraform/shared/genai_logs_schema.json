@@ -36,8 +36,7 @@
       { "name": "gen_ai_tool_definitions_ref",    "type": "STRING", "mode": "NULLABLE" },
       { "name": "gcp_vertex_agent_invocation_id", "type": "STRING", "mode": "NULLABLE" },
       { "name": "gcp_vertex_agent_event_id",      "type": "STRING", "mode": "NULLABLE" },
-      { "name": "event_name",                     "type": "STRING", "mode": "NULLABLE" },
-      { "name": "user_id",                        "type": "STRING", "mode": "NULLABLE" }
+      { "name": "event_name",                     "type": "STRING", "mode": "NULLABLE" }
     ]
   }
 ]

@@ -10,6 +10,8 @@ venv/
 # Environment overrides
 .env
 .env.local
+NEXT_STEPS.md
+deployment_metadata.json
 
 # Editor/IDE (no trailing slash — sandbox drops these as empty files too)
 .vscode

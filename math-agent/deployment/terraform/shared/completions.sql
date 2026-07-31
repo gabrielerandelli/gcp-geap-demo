@@ -17,8 +17,8 @@
 -- Note: Input files contain full conversation history, so messages may appear multiple times.
 --
 -- Log data is exported directly to BigQuery via log sinks.
--- The table `gen_ai_client_inference_operation_details` is pre-created by Terraform
--- and populated by Cloud Logging via the sink.
+-- The GenAI log table (${genai_logs_table}) is pre-created by Terraform and
+-- populated by Cloud Logging via the sink.
 -- Labels are flattened into individual columns (dots replaced with underscores).
 
 -- Extract message references from Cloud Logging BQ export (scan once, extract both input/output)
@@ -34,9 +34,8 @@ WITH log_refs AS (
     labels.gen_ai_usage_input_tokens AS usage_input_tokens,
     labels.gen_ai_usage_output_tokens AS usage_output_tokens,
     labels.gen_ai_agent_name AS agent_name,
-    labels.gen_ai_response_finish_reasons AS finish_reasons,
-    labels.user_id
-  FROM `${project_id}.${dataset_id}.gen_ai_client_inference_operation_details`
+    labels.gen_ai_response_finish_reasons AS finish_reasons
+  FROM `${project_id}.${dataset_id}.${genai_logs_table}`
   WHERE labels.gen_ai_input_messages_ref IS NOT NULL
      OR labels.gen_ai_output_messages_ref IS NOT NULL
 ),
@@ -53,7 +52,6 @@ unpivoted_refs AS (
     usage_output_tokens,
     agent_name,
     finish_reasons,
-    user_id,
     input_ref AS messages_ref_uri,
     'input' AS message_type
   FROM log_refs
@@ -71,7 +69,6 @@ unpivoted_refs AS (
     usage_output_tokens,
     agent_name,
     finish_reasons,
-    user_id,
     output_ref AS messages_ref_uri,
     'output' AS message_type
   FROM log_refs
@@ -90,7 +87,6 @@ joined_data AS (
     lr.usage_output_tokens,
     lr.agent_name,
     lr.finish_reasons,
-    lr.user_id,
     lr.messages_ref_uri,
     lr.message_type,
     SPLIT(REGEXP_EXTRACT(lr.messages_ref_uri, r'/([^/]+)\.jsonl'), '_')[OFFSET(0)] AS api_call_id,
@@ -114,7 +110,6 @@ flattened AS (
     usage_output_tokens,
     agent_name,
     finish_reasons,
-    user_id,
     messages_ref_uri,
     message_type,
     api_call_id,
@@ -193,7 +188,6 @@ SELECT
   usage_output_tokens,
   agent_name,
   finish_reasons,
-  user_id,
 
   -- Additional metadata
   uri,

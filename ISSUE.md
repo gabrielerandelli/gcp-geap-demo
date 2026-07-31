@@ -1,0 +1,3 @@
+- agent gateway può essere integrato alla demo? magari aggiungendo una semantic policy?
+- Non capisco come mai l'observability non risulta attiva su mcp server registrato dentro gemini enterprise agent platform agent registry
+- non capisco come mai l'agente non  è stato registrato su agent runtime come a2a

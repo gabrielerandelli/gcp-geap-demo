@@ -17,14 +17,16 @@ locals {
 }
 
 resource "google_vertex_ai_reasoning_engine" "app" {
+  for_each = local.deploy_project_ids
+
   display_name = var.project_name
   description  = "Agent deployed via Terraform"
   region       = var.region
-  project      = var.project_id
+  project      = each.value
 
   spec {
     agent_framework = "google-adk"
-    service_account = google_service_account.app_sa.email
+    service_account = google_service_account.app_sa[each.key].email
 
     deployment_spec {
       min_instances         = 1
@@ -38,7 +40,7 @@ resource "google_vertex_ai_reasoning_engine" "app" {
 
       env {
         name  = "LOGS_BUCKET_NAME"
-        value = google_storage_bucket.logs_data_bucket.name
+        value = google_storage_bucket.logs_data_bucket[each.value].name
       }
 
       # GOOGLE_CLOUD_PROJECT is reserved by Agent Runtime (the platform injects
@@ -85,7 +87,7 @@ resource "google_vertex_ai_reasoning_engine" "app" {
 
       env {
         name  = "OTEL_INSTRUMENTATION_GENAI_UPLOAD_BASE_PATH"
-        value = "gs://${google_storage_bucket.logs_data_bucket.name}/completions"
+        value = "gs://${google_storage_bucket.logs_data_bucket[each.value].name}/completions"
       }
 
       env {
@@ -116,5 +118,5 @@ resource "google_vertex_ai_reasoning_engine" "app" {
   }
 
   # Make dependencies conditional to avoid errors.
-  depends_on = [google_project_service.services]
+  depends_on = [google_project_service.deploy_project_services]
 }

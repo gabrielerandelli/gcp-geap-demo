@@ -1,7 +1,7 @@
 # math-agent
 
 Simple ReAct agent
-Agent generated with `agents-cli` version `1.1.0`
+Agent generated with `agents-cli` version `1.2.1`
 
 ## Project Structure
 
@@ -11,6 +11,8 @@ math-agent/
 │   ├── agent.py               # Main agent logic
 │   ├── fast_api_app.py        # FastAPI Backend server
 │   └── app_utils/             # App utilities and helpers
+├── .github/                   # CI/CD pipeline configurations for GitHub Actions
+├── deployment/                # Infrastructure and deployment scripts
 ├── tests/                     # Unit, integration, and load tests
 ├── GEMINI.md                  # AI-assisted development guide
 └── pyproject.toml             # Project dependencies
@@ -24,6 +26,7 @@ Before you begin, ensure you have:
 - **uv**: Python package manager (used for all dependency management in this project) - [Install](https://docs.astral.sh/uv/getting-started/installation/) ([add packages](https://docs.astral.sh/uv/concepts/dependencies/) with `uv add <package>`)
 - **agents-cli**: Agents CLI - Install with `uv tool install google-agents-cli`
 - **Google Cloud SDK**: For GCP services - [Install](https://cloud.google.com/sdk/docs/install)
+- **Terraform**: For infrastructure deployment - [Install](https://developer.hashicorp.com/terraform/downloads)
 
 
 ## Quick Start
@@ -59,12 +62,12 @@ You can also use features from the [ADK](https://adk.dev/) CLI with `uv run adk`
 | `uv run pytest tests/unit tests/integration` | Run unit and integration tests                                                        |
 | `agents-cli deploy`  | Deploy agent to Agent Runtime                                                                |
 | `agents-cli publish gemini-enterprise` | Register deployed agent to Gemini Enterprise                    || [A2A Inspector](https://github.com/a2aproject/a2a-inspector) | Launch A2A Protocol Inspector                                                        |
+| `agents-cli infra single-project` | Set up single-project infrastructure using Terraform                              |
 
 ## 🛠️ Project Management
 
 | Command | What It Does |
 |---------|--------------|
-| `agents-cli scaffold enhance` | Add CI/CD pipelines and Terraform infrastructure |
 | `agents-cli infra cicd` | One-command setup of entire CI/CD pipeline + infrastructure |
 | `agents-cli scaffold upgrade` | Auto-upgrade to latest version while preserving customizations |
 
@@ -80,8 +83,6 @@ Edit your agent logic in `app/agent.py` and test with `agents-cli playground` - 
 gcloud config set project <your-project-id>
 agents-cli deploy
 ```
-
-To add CI/CD and Terraform, run `agents-cli scaffold enhance`.
 To set up your production infrastructure, run `agents-cli infra cicd`.
 
 ## Observability

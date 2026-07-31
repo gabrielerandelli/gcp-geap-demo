@@ -1,5 +1,5 @@
 name: math-agent
-acli_version: 1.1.0
+acli_version: 1.2.1
 agent_directory: app
 region: us-central1
 base_template: adk
@@ -7,6 +7,6 @@ generated_at: '2026-07-23T11:12:35.307363+00:00'
 language: python
 create_params:
   deployment_target: agent_runtime
-  cicd_runner: skip
+  cicd_runner: github_actions
   is_a2a: true
-  agent_guidance_filename: CLAUDE.md
+  agent_guidance_filename: GEMINI.md
