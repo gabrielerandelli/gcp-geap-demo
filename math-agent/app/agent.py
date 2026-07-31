@@ -120,13 +120,11 @@ async def _add_events_to_memory(callback_context: CallbackContext) -> None:
         if memory_service is None or not session.events:
             return
 
-        asyncio.create_task(
-            memory_service.add_events_to_memory(
-                app_name=session.app_name,
-                user_id=session.user_id,
-                events=session.events,
-                custom_metadata={"wait_for_completion": True},
-            )
+        await memory_service.add_events_to_memory(
+            app_name=session.app_name,
+            user_id=session.user_id,
+            events=session.events,
+            custom_metadata={"wait_for_completion": True},
         )
         _logger.info(
             "Dispatched background Memory Bank ingestion for user=%s events=%d",

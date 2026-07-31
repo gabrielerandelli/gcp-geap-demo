@@ -116,7 +116,7 @@ def test_remote_memory_bank_retention() -> None:
     )
 
     # Wait for asynchronous Memory Bank ingestion background task
-    time.sleep(10.0)
+    time.sleep(20.0)
 
     # Session 2: Recall personal fact via LoadMemoryTool
     response_2 = _query_remote_agent(
