@@ -125,6 +125,7 @@ async def _add_events_to_memory(callback_context: CallbackContext) -> None:
                 app_name=session.app_name,
                 user_id=session.user_id,
                 events=session.events,
+                custom_metadata={"wait_for_completion": True},
             )
         )
         _logger.info(
