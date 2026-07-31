@@ -296,26 +296,142 @@ async def _add_events_to_memory(callback_context: CallbackContext) -> None:
         )
 
 
-# 5. Preserve Agent + App exports.
-root_agent = Agent(
-    name="root_agent",
+# 5. Gamification Tool: Funny Cartoon Reward Badge Generator.
+def generate_funny_reward_image(
+    title: str, joke_punchline: str, theme: str = "star"
+) -> dict:
+    """Generate a vibrant, funny cartoon reward badge card for a primary school student.
+
+    Args:
+        title: Celebratory badge title (e.g. 'Math Superstar!', 'Owl-some Job!',
+          'Math Wizard!').
+        joke_punchline: A funny kid-friendly math joke or riddle punchline.
+        theme: Theme of the badge ('star', 'trophy', 'owl', 'puppy', 'rocket').
+
+    Returns:
+        dict with badge details and an embedded SVG cartoon reward badge.
+    """
+    badge_icons = {
+        "star": "⭐",
+        "trophy": "🏆",
+        "owl": "🦉",
+        "puppy": "🐶",
+        "rocket": "🚀",
+    }
+    icon = badge_icons.get(theme.lower(), "⭐")
+
+    svg_content = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 300" width="100%" height="auto">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B6B" />
+      <stop offset="50%" stop-color="#4ECDC4" />
+      <stop offset="100%" stop-color="#FFE66D" />
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <rect width="480" height="280" x="10" y="10" rx="20" ry="20" fill="url(#bgGrad)" stroke="#FFFFFF" stroke-width="4" filter="url(#shadow)" />
+  <rect width="450" height="250" x="25" y="25" rx="15" ry="15" fill="#FFFFFF" fill-opacity="0.9" />
+  
+  <text x="250" y="70" font-family="'Comic Sans MS', 'Chalkboard SE', cursive, sans-serif" font-size="28" font-weight="bold" fill="#2B2D42" text-anchor="middle">
+    {icon} {title} {icon}
+  </text>
+  
+  <circle cx="250" cy="130" r="35" fill="#FFE66D" stroke="#FF6B6B" stroke-width="3" />
+  <text x="250" y="142" font-size="40" text-anchor="middle">{icon}</text>
+  
+  <rect width="400" height="65" x="50" y="185" rx="10" ry="10" fill="#F7FFF7" stroke="#4ECDC4" stroke-width="2" />
+  <text x="250" y="212" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1A535C" text-anchor="middle">
+    🎉 FUN MATH JOKE PUNCHLINE 🎉
+  </text>
+  <text x="250" y="235" font-family="sans-serif" font-size="15" font-style="italic" fill="#2B2D42" text-anchor="middle">
+    "{joke_punchline}"
+  </text>
+</svg>"""
+
+    return {
+        "status": "success",
+        "title": title,
+        "joke_punchline": joke_punchline,
+        "theme": theme,
+        "badge_svg": svg_content,
+        "badge_markdown": f"![{title}](data:image/svg+xml;utf8,{svg_content})",
+    }
+
+
+# 6. Define Multi-Agent System (MAS) Sub-Agents.
+
+math_calculator_agent = Agent(
+    name="math_calculator_agent",
+    description=(
+        "Specialist sub-agent for solving, verifying, and explaining primary school "
+        "arithmetic operations (addition, subtraction, multiplication, division) "
+        "and currency word problems step-by-step."
+    ),
     model=Gemini(
         model="gemini-flash-latest",
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
     instruction=(
-        "You are a math assistant. For any arithmetic request, call the "
-        "appropriate arithmetic tool available to you rather than computing "
-        "yourself. You can also convert currency amounts by calling the "
-        "`_convert_currency` tool with (amount, base currency code, target "
-        "currency code) — combine it freely with arithmetic tools "
-        "(e.g. 'convert 100 USD to EUR then divide by 3'). "
-        "Refuse anything unrelated to arithmetic or currency conversion. "
-        "When the user references earlier calculations or asks for a summary "
-        "of past operations, call the `load_memory` tool with a concise "
-        "natural-language query describing what they're asking about."
+        "You are the Math Calculator Specialist for primary school students. "
+        "For any arithmetic computation, ALWAYS call the appropriate MCP tool "
+        "(add, sub, multiply, divide) rather than calculating yourself. "
+        "For currency conversion word problems, call `_convert_currency`. "
+        "When checking a student's answer, confirm if they are correct or "
+        "explain step-by-step where the mistake is in a simple, friendly, "
+        "encouraging tone suitable for elementary school kids."
     ),
-    tools=[math_toolset, LoadMemoryTool(), currency_tool],
+    tools=[math_toolset, currency_tool],
+)
+
+reward_fun_agent = Agent(
+    name="reward_fun_agent",
+    description=(
+        "Specialist sub-agent for rewarding primary school students when they get "
+        "a math problem right. Tells hilarious kid-friendly math jokes and "
+        "generates funny cartoon reward badges/images."
+    ),
+    model=Gemini(
+        model="gemini-flash-latest",
+        retry_options=types.HttpRetryOptions(attempts=3),
+    ),
+    instruction=(
+        "You are the Fun Reward Specialist! When a primary school student solves a "
+        "math problem correctly, celebrate their success enthusiastically! "
+        "Tell a funny, clean, age-appropriate math joke or riddle, and ALWAYS call "
+        "`generate_funny_reward_image` to create a colorful cartoon reward badge."
+    ),
+    tools=[generate_funny_reward_image],
+)
+
+# 7. Root MAS Coordinator Agent ("Sparky the Math Mascot").
+root_agent = Agent(
+    name="root_agent",
+    description="Primary School Math Tutor MAS Root Coordinator Agent",
+    model=Gemini(
+        model="gemini-flash-latest",
+        retry_options=types.HttpRetryOptions(attempts=3),
+    ),
+    instruction=(
+        "You are 'Sparky', an encouraging, enthusiastic, and friendly Primary School "
+        "Math Tutor AI! You coordinate a team of specialized agents: "
+        "`math_calculator_agent` (math solving & answer verification) and "
+        "`reward_fun_agent` (funny jokes & cartoon reward badge images).\n\n"
+        "Guidelines for tutoring primary school students:\n"
+        "1. When the student asks a math question or submits an answer, delegate "
+        "the calculation / answer verification to `math_calculator_agent`.\n"
+        "2. If `math_calculator_agent` confirms the student got the answer RIGHT: "
+        "delegate to `reward_fun_agent` to celebrate their achievement with a "
+        "hilarious math joke and a funny cartoon reward badge image!\n"
+        "3. If the answer is INCORRECT: gently encourage them, give a fun hint, "
+        "and guide them step-by-step without giving away the final answer immediately.\n"
+        "4. When the student asks about past operations or topics they mastered, "
+        "call `load_memory` to recall their profile and progress history.\n"
+        "5. Keep all language warm, patient, positive, and elementary school friendly."
+    ),
+    sub_agents=[math_calculator_agent, reward_fun_agent],
+    tools=[LoadMemoryTool()],
     before_model_callback=_model_armor_before,
     after_model_callback=_model_armor_after,
     after_agent_callback=_add_events_to_memory,
@@ -325,3 +441,4 @@ app = App(
     root_agent=root_agent,
     name="app",
 )
+

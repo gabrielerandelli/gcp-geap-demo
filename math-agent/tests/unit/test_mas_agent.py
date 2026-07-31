@@ -1,0 +1,44 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from app.agent import (
+    generate_funny_reward_image,
+    math_calculator_agent,
+    reward_fun_agent,
+    root_agent,
+)
+
+
+def test_mas_agent_structure() -> None:
+    """Verify that root_agent is configured as a Multi-Agent System (MAS)."""
+    assert root_agent.name == "root_agent"
+    assert len(root_agent.sub_agents) == 2, "Expected 2 sub-agents in MAS"
+
+    sub_agent_names = [sa.name for sa in root_agent.sub_agents]
+    assert "math_calculator_agent" in sub_agent_names
+    assert "reward_fun_agent" in sub_agent_names
+
+
+def test_generate_funny_reward_image_tool() -> None:
+    """Test that generate_funny_reward_image returns structured badge data with valid SVG."""
+    res = generate_funny_reward_image(
+        title="Math Superstar!",
+        joke_punchline="Because 7 ate 9!",
+        theme="star",
+    )
+    assert res["status"] == "success"
+    assert res["title"] == "Math Superstar!"
+    assert res["joke_punchline"] == "Because 7 ate 9!"
+    assert "<svg" in res["badge_svg"]
+    assert "data:image/svg+xml" in res["badge_markdown"]
