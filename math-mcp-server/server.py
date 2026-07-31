@@ -115,6 +115,47 @@ class GeapMcpTracingMiddleware(Middleware):
                 raise
 
 
+# --- Pydantic Tool Schemas --------------------------------------------------
+
+from pydantic import BaseModel, Field
+
+
+class MathOpInput(BaseModel):
+    """Input model for binary arithmetic operations."""
+
+    a: float = Field(..., description="The first operand number (addend, minuend, or multiplicand).")
+    b: float = Field(..., description="The second operand number (addend, subtrahend, or multiplier).")
+
+
+class DivideInput(BaseModel):
+    """Input model for division operation."""
+
+    a: float = Field(..., description="The dividend number to be divided.")
+    b: float = Field(..., description="The divisor number to divide by.")
+
+
+class MathOpOutput(BaseModel):
+    """Output model for binary arithmetic operations."""
+
+    status: str = Field(..., description="Execution status: 'success' or 'error'.")
+    result: float | None = Field(None, description="The numerical result of the calculation.")
+    error: str | None = Field(None, description="Error message if the operation failed.")
+    recovery_instruction: str | None = Field(
+        None, description="Guided recovery advice for the LLM if an error occurred."
+    )
+
+
+class DivideOutput(BaseModel):
+    """Output model for division operation."""
+
+    status: str = Field(..., description="Execution status: 'success' or 'error'.")
+    result: float | None = Field(None, description="The quotient result of the division.")
+    error: str | None = Field(None, description="Error message if division failed (e.g. division by zero).")
+    recovery_instruction: str | None = Field(
+        None, description="Guided recovery advice for the LLM if an error occurred."
+    )
+
+
 # --- FastMCP server + tools ------------------------------------------------
 
 mcp = FastMCP("math-mcp")
@@ -122,29 +163,112 @@ mcp.add_middleware(GeapMcpTracingMiddleware())
 
 
 @mcp.tool(annotations={"title": "Add", "readOnlyHint": True, "idempotentHint": True})
-def add(a: float, b: float) -> float:
-    """Return the sum a + b."""
-    return a + b
+def add(a: float, b: float) -> MathOpOutput:
+    """Calculate the sum of two numbers a and b.
+
+    Args:
+        a (float): The first number (addend) to add.
+        b (float): The second number (addend) to add.
+
+    Returns:
+        MathOpOutput: Pydantic model containing calculation status, numerical result, error details, and recovery instructions.
+    """
+    try:
+        return MathOpOutput(status="success", result=a + b)
+    except Exception as exc:
+        return MathOpOutput(
+            status="error",
+            result=None,
+            error=f"Arithmetic error during addition: {exc}",
+            recovery_instruction=(
+                "Inform the student that an arithmetic error occurred, and ask them to verify their input numbers."
+            ),
+        )
 
 
 @mcp.tool(annotations={"title": "Subtract", "readOnlyHint": True, "idempotentHint": True})
-def sub(a: float, b: float) -> float:
-    """Return the difference a - b."""
-    return a - b
+def sub(a: float, b: float) -> MathOpOutput:
+    """Calculate the difference a - b.
+
+    Args:
+        a (float): The minuend number to subtract from.
+        b (float): The subtrahend number to subtract.
+
+    Returns:
+        MathOpOutput: Pydantic model containing calculation status, numerical result, error details, and recovery instructions.
+    """
+    try:
+        return MathOpOutput(status="success", result=a - b)
+    except Exception as exc:
+        return MathOpOutput(
+            status="error",
+            result=None,
+            error=f"Arithmetic error during subtraction: {exc}",
+            recovery_instruction=(
+                "Inform the student that an arithmetic error occurred, and ask them to verify their input numbers."
+            ),
+        )
 
 
 @mcp.tool(annotations={"title": "Multiply", "readOnlyHint": True, "idempotentHint": True})
-def multiply(a: float, b: float) -> float:
-    """Return the product a * b."""
-    return a * b
+def multiply(a: float, b: float) -> MathOpOutput:
+    """Calculate the product of a multiplied by b.
+
+    Args:
+        a (float): The first multiplier number.
+        b (float): The second multiplier number.
+
+    Returns:
+        MathOpOutput: Pydantic model containing calculation status, numerical result, error details, and recovery instructions.
+    """
+    try:
+        return MathOpOutput(status="success", result=a * b)
+    except Exception as exc:
+        return MathOpOutput(
+            status="error",
+            result=None,
+            error=f"Arithmetic error during multiplication: {exc}",
+            recovery_instruction=(
+                "Inform the student that an arithmetic error occurred, and ask them to try with smaller numbers."
+            ),
+        )
 
 
 @mcp.tool(annotations={"title": "Divide", "readOnlyHint": True, "idempotentHint": True})
-def divide(a: float, b: float) -> float:
-    """Return the quotient a / b. Raises ValueError when b == 0."""
+def divide(a: float, b: float) -> DivideOutput:
+    """Calculate the quotient of a divided by b. Handles division by zero gracefully.
+
+    Args:
+        a (float): The dividend number to divide.
+        b (float): The divisor number to divide by.
+
+    Returns:
+        DivideOutput: Pydantic model containing either the calculation result or a
+            guided recovery instruction if b is zero or an error occurs.
+    """
     if b == 0:
-        raise ValueError("Cannot divide by zero.")
-    return a / b
+        return DivideOutput(
+            status="error",
+            result=None,
+            error="Division by zero is mathematically undefined.",
+            recovery_instruction=(
+                "Gently explain to the primary school student that dividing by zero "
+                "is impossible in mathematics (you cannot share items among zero people), "
+                "and encourage them to try with a number greater than zero."
+            ),
+        )
+    try:
+        return DivideOutput(status="success", result=a / b)
+    except Exception as exc:
+        return DivideOutput(
+            status="error",
+            result=None,
+            error=f"Arithmetic error during division: {exc}",
+            recovery_instruction=(
+                "Inform the student that an arithmetic error occurred, and ask if they would like to re-enter the numbers."
+            ),
+        )
+
 
 
 if __name__ == "__main__":

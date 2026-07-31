@@ -11,6 +11,7 @@ venv/
 .env
 .env.local
 NEXT_STEPS.md
+ISSUE.md
 deployment_metadata.json
 
 # Editor/IDE (no trailing slash — sandbox drops these as empty files too)

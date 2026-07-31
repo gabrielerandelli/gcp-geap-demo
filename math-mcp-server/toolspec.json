@@ -2,12 +2,12 @@
   "tools": [
     {
       "name": "add",
-      "description": "Return the sum a + b.",
+      "description": "Calculate the sum of two numbers a and b.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "a": { "type": "number", "description": "First operand." },
-          "b": { "type": "number", "description": "Second operand." }
+          "a": { "type": "number", "description": "The first number to add." },
+          "b": { "type": "number", "description": "The second number to add." }
         },
         "required": ["a", "b"]
       },
@@ -19,12 +19,12 @@
     },
     {
       "name": "sub",
-      "description": "Return the difference a - b.",
+      "description": "Calculate the difference a - b.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "a": { "type": "number", "description": "Minuend." },
-          "b": { "type": "number", "description": "Subtrahend." }
+          "a": { "type": "number", "description": "The minuend number." },
+          "b": { "type": "number", "description": "The subtrahend number to subtract." }
         },
         "required": ["a", "b"]
       },
@@ -36,12 +36,12 @@
     },
     {
       "name": "multiply",
-      "description": "Return the product a * b.",
+      "description": "Calculate the product of a multiplied by b.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "a": { "type": "number", "description": "First factor." },
-          "b": { "type": "number", "description": "Second factor." }
+          "a": { "type": "number", "description": "The first multiplier number." },
+          "b": { "type": "number", "description": "The second multiplier number." }
         },
         "required": ["a", "b"]
       },
@@ -53,14 +53,14 @@
     },
     {
       "name": "divide",
-      "description": "Return the quotient a / b. Raises an error when b == 0.",
+      "description": "Calculate the quotient of a divided by b. Handles division by zero gracefully with recovery instructions.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "a": { "type": "number", "description": "Dividend." },
+          "a": { "type": "number", "description": "The dividend number to divide." },
           "b": {
             "type": "number",
-            "description": "Divisor (must be non-zero)."
+            "description": "The divisor number to divide by."
           }
         },
         "required": ["a", "b"]
@@ -73,3 +73,4 @@
     }
   ]
 }
+
