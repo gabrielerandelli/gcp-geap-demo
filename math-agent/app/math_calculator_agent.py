@@ -155,8 +155,15 @@ async def _convert_currency(
     Returns:
         CurrencyConvertOutput: Pydantic model containing converted amount, exchange rate, base, target, status, and guided recovery instruction if conversion fails.
     """
+    intent = {
+        "action": "currency_conversion",
+        "amount": amount,
+        "base": base.upper() if base else base,
+        "target": target.upper() if target else target,
+    }
+
     if credential is None or credential.http is None:
-        return CurrencyConvertOutput(
+        output = CurrencyConvertOutput(
             status="error",
             error="Credential unavailable — Agent Identity token retrieval failed",
             recovery_instruction=(
@@ -164,11 +171,20 @@ async def _convert_currency(
                 "data is currently offline, but you can help with regular math!"
             ),
         )
+        log_intent_outcome(
+            logger=_logger,
+            level=logging.WARNING,
+            message="Currency conversion tool execution failed (missing credential)",
+            intent=intent,
+            outcome=output.model_dump(),
+            event_type="currency_tool_execution",
+        )
+        return output
     api_key = credential.http.credentials.token
     if not api_key and credential.http.additional_headers:
         api_key = next(iter(credential.http.additional_headers.values()), None)
     if not api_key:
-        return CurrencyConvertOutput(
+        output = CurrencyConvertOutput(
             status="error",
             error="Credential unavailable — no token/api-key returned",
             recovery_instruction=(
@@ -176,6 +192,15 @@ async def _convert_currency(
                 "data is currently offline, but you can help with regular math!"
             ),
         )
+        log_intent_outcome(
+            logger=_logger,
+            level=logging.WARNING,
+            message="Currency conversion tool execution failed (no api key)",
+            intent=intent,
+            outcome=output.model_dump(),
+            event_type="currency_tool_execution",
+        )
+        return output
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             r = await client.get(
@@ -189,7 +214,7 @@ async def _convert_currency(
             r.raise_for_status()
             data = r.json().get("data", {})
             if target.upper() not in data:
-                return CurrencyConvertOutput(
+                output = CurrencyConvertOutput(
                     status="error",
                     error=f"Invalid or unsupported currency code: {target}",
                     recovery_instruction=(
@@ -197,17 +222,35 @@ async def _convert_currency(
                         "and ask them to check the 3-letter currency symbol (like USD, EUR, or GBP)."
                     ),
                 )
+                log_intent_outcome(
+                    logger=_logger,
+                    level=logging.WARNING,
+                    message="Currency conversion tool execution failed (invalid currency code)",
+                    intent=intent,
+                    outcome=output.model_dump(),
+                    event_type="currency_tool_execution",
+                )
+                return output
             rate = data[target.upper()]
-        return CurrencyConvertOutput(
+        output = CurrencyConvertOutput(
             status="success",
             converted=round(amount * rate, 2),
             rate=rate,
             base=base.upper(),
             target=target.upper(),
         )
+        log_intent_outcome(
+            logger=_logger,
+            level=logging.INFO,
+            message="Currency conversion tool execution succeeded",
+            intent=intent,
+            outcome=output.model_dump(),
+            event_type="currency_tool_execution",
+        )
+        return output
     except Exception as exc:
         _logger.warning("Currency conversion network error: %s", exc)
-        return CurrencyConvertOutput(
+        output = CurrencyConvertOutput(
             status="error",
             error=f"Currency service error: {exc}",
             recovery_instruction=(
@@ -215,6 +258,15 @@ async def _convert_currency(
                 "and ask if they would like to try another calculation or a different problem."
             ),
         )
+        log_intent_outcome(
+            logger=_logger,
+            level=logging.WARNING,
+            message="Currency conversion tool execution network/api error",
+            intent=intent,
+            outcome=output.model_dump(),
+            event_type="currency_tool_execution",
+        )
+        return output
 
 
 currency_tool = AuthenticatedFunctionTool(

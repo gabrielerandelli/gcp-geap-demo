@@ -24,7 +24,10 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import SpanKind, Status, StatusCode
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+from json_logger import log_intent_outcome, setup_structured_logging
+from pii_scrubber import PiiScrubber
+
+setup_structured_logging()
 logger = logging.getLogger(__name__)
 
 # --- OpenTelemetry setup ---------------------------------------------------
@@ -80,7 +83,7 @@ _tracer = trace.get_tracer("math-mcp")
 # --- FastMCP middleware ----------------------------------------------------
 
 class GeapMcpTracingMiddleware(Middleware):
-    """Emits one span per tools/call with the GEAP-required attributes."""
+    """Emits one span per tools/call with the GEAP-required attributes and structured logging."""
 
     async def on_call_tool(
         self,
@@ -88,6 +91,15 @@ class GeapMcpTracingMiddleware(Middleware):
         call_next: CallNext[mt.CallToolRequestParams, Any],
     ) -> Any:
         tool_name = context.message.name
+        raw_arguments = getattr(context.message, "arguments", {}) or {}
+        scrubbed_args = PiiScrubber.scrub_data(raw_arguments)
+
+        intent = {
+            "mcp_method": "tools/call",
+            "tool_name": tool_name,
+            "arguments": scrubbed_args,
+        }
+
         with _tracer.start_as_current_span(
             f"tools/call {tool_name}",
             kind=SpanKind.SERVER,
@@ -107,8 +119,34 @@ class GeapMcpTracingMiddleware(Middleware):
                 except Exception:
                     pass
             try:
-                return await call_next(context)
+                res = await call_next(context)
+                outcome = {
+                    "status": "success",
+                    "result_type": type(res).__name__,
+                }
+                log_intent_outcome(
+                    logger=logger,
+                    level=logging.INFO,
+                    message=f"MCP tool '{tool_name}' call executed successfully",
+                    intent=intent,
+                    outcome=outcome,
+                    event_type="mcp_tool_execution",
+                )
+                return res
             except Exception as exc:
+                outcome = {
+                    "status": "error",
+                    "error_type": type(exc).__name__,
+                    "error_message": str(exc),
+                }
+                log_intent_outcome(
+                    logger=logger,
+                    level=logging.ERROR,
+                    message=f"MCP tool '{tool_name}' call execution failed",
+                    intent=intent,
+                    outcome=outcome,
+                    event_type="mcp_tool_execution",
+                )
                 span.set_status(Status(StatusCode.ERROR, str(exc)))
                 span.set_attribute("error.type", type(exc).__name__)
                 span.set_attribute("error.message", str(exc))
@@ -173,10 +211,19 @@ def add(a: float, b: float) -> MathOpOutput:
     Returns:
         MathOpOutput: Pydantic model containing calculation status, numerical result, error details, and recovery instructions.
     """
+    intent = {"tool": "add", "a": a, "b": b}
     try:
-        return MathOpOutput(status="success", result=a + b)
+        res = MathOpOutput(status="success", result=a + b)
+        log_intent_outcome(
+            logger=logger,
+            level=logging.INFO,
+            message="Math operation 'add' succeeded",
+            intent=intent,
+            outcome=res.model_dump(),
+        )
+        return res
     except Exception as exc:
-        return MathOpOutput(
+        res = MathOpOutput(
             status="error",
             result=None,
             error=f"Arithmetic error during addition: {exc}",
@@ -184,6 +231,14 @@ def add(a: float, b: float) -> MathOpOutput:
                 "Inform the student that an arithmetic error occurred, and ask them to verify their input numbers."
             ),
         )
+        log_intent_outcome(
+            logger=logger,
+            level=logging.WARNING,
+            message="Math operation 'add' failed",
+            intent=intent,
+            outcome=res.model_dump(),
+        )
+        return res
 
 
 @mcp.tool(annotations={"title": "Subtract", "readOnlyHint": True, "idempotentHint": True})
@@ -197,10 +252,19 @@ def sub(a: float, b: float) -> MathOpOutput:
     Returns:
         MathOpOutput: Pydantic model containing calculation status, numerical result, error details, and recovery instructions.
     """
+    intent = {"tool": "sub", "a": a, "b": b}
     try:
-        return MathOpOutput(status="success", result=a - b)
+        res = MathOpOutput(status="success", result=a - b)
+        log_intent_outcome(
+            logger=logger,
+            level=logging.INFO,
+            message="Math operation 'sub' succeeded",
+            intent=intent,
+            outcome=res.model_dump(),
+        )
+        return res
     except Exception as exc:
-        return MathOpOutput(
+        res = MathOpOutput(
             status="error",
             result=None,
             error=f"Arithmetic error during subtraction: {exc}",
@@ -208,6 +272,14 @@ def sub(a: float, b: float) -> MathOpOutput:
                 "Inform the student that an arithmetic error occurred, and ask them to verify their input numbers."
             ),
         )
+        log_intent_outcome(
+            logger=logger,
+            level=logging.WARNING,
+            message="Math operation 'sub' failed",
+            intent=intent,
+            outcome=res.model_dump(),
+        )
+        return res
 
 
 @mcp.tool(annotations={"title": "Multiply", "readOnlyHint": True, "idempotentHint": True})
@@ -221,10 +293,19 @@ def multiply(a: float, b: float) -> MathOpOutput:
     Returns:
         MathOpOutput: Pydantic model containing calculation status, numerical result, error details, and recovery instructions.
     """
+    intent = {"tool": "multiply", "a": a, "b": b}
     try:
-        return MathOpOutput(status="success", result=a * b)
+        res = MathOpOutput(status="success", result=a * b)
+        log_intent_outcome(
+            logger=logger,
+            level=logging.INFO,
+            message="Math operation 'multiply' succeeded",
+            intent=intent,
+            outcome=res.model_dump(),
+        )
+        return res
     except Exception as exc:
-        return MathOpOutput(
+        res = MathOpOutput(
             status="error",
             result=None,
             error=f"Arithmetic error during multiplication: {exc}",
@@ -232,6 +313,14 @@ def multiply(a: float, b: float) -> MathOpOutput:
                 "Inform the student that an arithmetic error occurred, and ask them to try with smaller numbers."
             ),
         )
+        log_intent_outcome(
+            logger=logger,
+            level=logging.WARNING,
+            message="Math operation 'multiply' failed",
+            intent=intent,
+            outcome=res.model_dump(),
+        )
+        return res
 
 
 @mcp.tool(annotations={"title": "Divide", "readOnlyHint": True, "idempotentHint": True})
@@ -246,8 +335,9 @@ def divide(a: float, b: float) -> DivideOutput:
         DivideOutput: Pydantic model containing either the calculation result or a
             guided recovery instruction if b is zero or an error occurs.
     """
+    intent = {"tool": "divide", "a": a, "b": b}
     if b == 0:
-        return DivideOutput(
+        res = DivideOutput(
             status="error",
             result=None,
             error="Division by zero is mathematically undefined.",
@@ -257,10 +347,26 @@ def divide(a: float, b: float) -> DivideOutput:
                 "and encourage them to try with a number greater than zero."
             ),
         )
+        log_intent_outcome(
+            logger=logger,
+            level=logging.WARNING,
+            message="Math operation 'divide' division by zero",
+            intent=intent,
+            outcome=res.model_dump(),
+        )
+        return res
     try:
-        return DivideOutput(status="success", result=a / b)
+        res = DivideOutput(status="success", result=a / b)
+        log_intent_outcome(
+            logger=logger,
+            level=logging.INFO,
+            message="Math operation 'divide' succeeded",
+            intent=intent,
+            outcome=res.model_dump(),
+        )
+        return res
     except Exception as exc:
-        return DivideOutput(
+        res = DivideOutput(
             status="error",
             result=None,
             error=f"Arithmetic error during division: {exc}",
@@ -268,6 +374,14 @@ def divide(a: float, b: float) -> DivideOutput:
                 "Inform the student that an arithmetic error occurred, and ask if they would like to re-enter the numbers."
             ),
         )
+        log_intent_outcome(
+            logger=logger,
+            level=logging.WARNING,
+            message="Math operation 'divide' failed",
+            intent=intent,
+            outcome=res.model_dump(),
+        )
+        return res
 
 
 

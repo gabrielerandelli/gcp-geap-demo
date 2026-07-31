@@ -13,10 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from google.adk.agents import Agent
 from google.adk.models import Gemini
 from google.genai import types
 from pydantic import BaseModel, Field
+
+from app.json_logger import log_intent_outcome
+
+_logger = logging.getLogger(__name__)
 
 
 class RewardBadgeInput(BaseModel):
@@ -64,6 +69,12 @@ def generate_funny_reward_image(
     Returns:
         RewardBadgeOutput: Pydantic model containing status, title, joke_punchline, theme, raw badge_svg, embedded badge_markdown, and recovery instructions if an error occurs.
     """
+    intent = {
+        "action": "generate_reward_badge_image",
+        "title": title,
+        "theme": theme,
+        "joke_punchline": joke_punchline,
+    }
     try:
         badge_icons = {
             "star": "⭐",
@@ -104,7 +115,7 @@ def generate_funny_reward_image(
   </text>
 </svg>"""
 
-        return RewardBadgeOutput(
+        output = RewardBadgeOutput(
             status="success",
             title=title,
             joke_punchline=joke_punchline,
@@ -112,8 +123,22 @@ def generate_funny_reward_image(
             badge_svg=svg_content,
             badge_markdown=f"![{title}](data:image/svg+xml;utf8,{svg_content})",
         )
+        log_intent_outcome(
+            logger=_logger,
+            level=logging.INFO,
+            message="Reward badge generation succeeded",
+            intent=intent,
+            outcome={
+                "status": "success",
+                "title": title,
+                "theme": theme,
+                "svg_bytes": len(svg_content),
+            },
+            event_type="reward_tool_execution",
+        )
+        return output
     except Exception as exc:
-        return RewardBadgeOutput(
+        output = RewardBadgeOutput(
             status="error",
             title=title,
             joke_punchline=joke_punchline,
@@ -126,6 +151,15 @@ def generate_funny_reward_image(
                 "even though the cartoon badge artwork could not be rendered this time!"
             ),
         )
+        log_intent_outcome(
+            logger=_logger,
+            level=logging.WARNING,
+            message="Reward badge generation failed",
+            intent=intent,
+            outcome=output.model_dump(),
+            event_type="reward_tool_execution",
+        )
+        return output
 
 
 reward_fun_agent = Agent(
