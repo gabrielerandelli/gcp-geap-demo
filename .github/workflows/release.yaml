@@ -28,6 +28,7 @@ jobs:
 
       - name: gcloud run deploy math-mcp
         run: |
+          VERSION_LABEL=$(echo "${{ github.ref_name }}" | tr '[:upper:].' '[:lower:]-')
           gcloud run deploy math-mcp \
             --source math-mcp-server/ \
             --project "${{ vars.GCP_PROJECT_ID }}" \
@@ -35,7 +36,7 @@ jobs:
             --no-allow-unauthenticated \
             --service-account "${{ vars.MCP_SA }}" \
             --set-env-vars "FASTMCP_CHECK_FOR_UPDATES=off,GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},MCP_SERVER_URN=${{ vars.MCP_SERVER_URN }},OTEL_SERVICE_NAME=math-mcp" \
-            --labels "version=${{ github.ref_name }}" \
+            --labels "version=${VERSION_LABEL}" \
             --quiet
 
   deploy-agent:
@@ -55,8 +56,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install agents-cli
-        run: pip install "google-agents-cli==1.2.1"
+      - name: Install dependencies (uv + agents-cli)
+        run: pip install uv "google-agents-cli==1.2.1"
 
       - name: agents-cli deploy math-agent
         working-directory: math-agent
